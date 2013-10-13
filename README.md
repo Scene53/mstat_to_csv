@@ -34,6 +34,29 @@ Example usage:
 Basic data sending to graphite instace:
     $ mongostat --host localhost --port 10001 5 | python26 ./mongostat2graphite.py --format graphite | nc graphite.host
 
+	mongodb.stats.mymongohost1.insert 0 1381667304.65
+    mongodb.stats.mymongohost1.query 0 1381667304.65
+    mongodb.stats.mymongohost1.update 18 1381667304.65
+    mongodb.stats.mymongohost1.delete 0 1381667304.65
+    mongodb.stats.mymongohost1.getmore 0 1381667304.65
+    mongodb.stats.mymongohost1.command.local 8 1381667304.65
+    mongodb.stats.mymongohost1.command.replicated 0 1381667304.65
+    mongodb.stats.mymongohost1.flushes 0 1381667304.65
+    mongodb.stats.mymongohost1.mapped 51507.2 1381667304.65
+    mongodb.stats.mymongohost1.vsize 103424.0 1381667304.65
+    mongodb.stats.mymongohost1.res 4177.92 1381667304.65
+    mongodb.stats.mymongohost1.faults 0 1381667304.65
+    mongodb.stats.mymongohost1.locked_db.casino53 2.0 1381667304.65
+    mongodb.stats.mymongohost1.idx_miss_% 0 1381667304.65
+    mongodb.stats.mymongohost1.qr 0 1381667304.65
+    mongodb.stats.mymongohost1.qw 0 1381667304.65
+    mongodb.stats.mymongohost1.ar 0 1381667304.65
+    mongodb.stats.mymongohost1.aw 0 1381667304.65
+    mongodb.stats.mymongohost1.netIn 601.0 1381667304.65
+    mongodb.stats.mymongohost1.netOut 14336.0 1381667304.65
+    mongodb.stats.mymongohost1.conn 83 1381667304.65
+    mongodb.stats.mymongohost1.repl 2 1381667304.65
+	
 The default case:
 
     JD10Gen:mstat_to_csv jdrumgoole$ mongostat | python mstat_to_csv.py 
