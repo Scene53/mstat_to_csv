@@ -31,6 +31,9 @@ optional arguments:
 
 Example usage:
 
+Basic data sending to graphite instace:
+    $ mongostat --host localhost --port 10001 5 | python26 ./mongostat2graphite.py --format graphite | nc graphite.host
+
 The default case:
 
     JD10Gen:mstat_to_csv jdrumgoole$ mongostat | python mstat_to_csv.py 
