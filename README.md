@@ -1,24 +1,33 @@
 Mongostat to CSV Conversion Script
 ==================================
 
-    usage: mstat_to_csv.py [-h] [--version] [--output OUTPUT] [--append]
-                           [--noheaders] [--input INPUT] [--columns COLUMNS]
-                           [--rowcount] [--listallcolumns] [--listcolumns]
+    usage: mongostat2graphite.py [-h] [--version] [--output OUTPUT] [--append]
+                             [--noheaders] [--input INPUT] [--columns COLUMNS]
+                             [--rowcount] [--listallcolumns] [--listcolumns]
+                             [--format {csv,graphite}]
+                             [--graphiteprefix GRAPHITEPREFIX]
 
 Program to parse the output of mongostat into a CSV file
 
-    optional arguments:
-      -h, --help         show this help message and exit
-      --version          show program's version number and exit
-      --output OUTPUT    Define an output file to write to (default is stdout)
-      --append           Append output to the file specified by --output
-      --noheaders        Don't output header columns (useful with --append)
-      --input INPUT      Define an input file tor read from (default is stdin)
-      --columns COLUMNS  Only output named columns in the order they appear on the
-                         command line
-      --rowcount         add a column to the left that numbers each row of output
-      --listallcolumns   list out canonical column headings and exit
-      --listcolumns      list out columns in current output and exit
+optional arguments:
+  -h, --help            show this help message and exit
+  --version             show program's version number and exit
+  --output OUTPUT       Define an output file to write to (default is stdout)
+  --append              Append output to the file specified by --output
+  --noheaders           Don't output header columns (useful with --append)
+  --input INPUT         Define an input file tor read from (default is stdin)
+  --columns COLUMNS     Only output named columns in the order they appear on
+                        the command line
+  --rowcount            add a column to the left that numbers each row of
+                        output
+  --listallcolumns      list out canonical column headings and exit
+  --listcolumns         list out columns in current output and exit
+  --format {csv,graphite}
+                        csv/graphite (default csv)
+  --graphiteprefix GRAPHITEPREFIX
+                        graphite metrics prefix ( default: mongodb.stats ), it
+                        alwasys adds the hostname after prefix and before
+                        metric, i.e mongodb.stats.myhostname1.insert
 
 Example usage:
 

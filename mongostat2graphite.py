@@ -1,6 +1,9 @@
-#!/usr/local/bin/python
-# Simple program to parse mongostat output into a sensible CSV format for ingestion
-# by Google Docs or Excel.
+#!/usr/bin/python
+# this script is by most was writeen by joe.drumgoole@10gen.com (https://github.com/jdrumgoole/mstat_to_csv) and was forken by Oded Maimon to add graphite output support (https://github.com/jdrumgoole/mstat_to_csv)
+#
+# Simple program to parse mongostat output into one of the following formats:
+#   - a sensible CSV format for ingestion by Google Docs or Excel
+#   - graphite format for sending the data to carbon
 # 
 # Mongostat does some things that make it difficult to ingest into Excel or a Google Spreadsheet,
 # including:
@@ -11,9 +14,9 @@
 #  No defined column seperator
 #  Automatic insert of header fields ever 10 lines or so.
 #
-# mstat_to_csv.py can read from stdin (via a pipe) or a file and write to stdout or a file.
+# mongostat2graphite.py can read from stdin (via a pipe) or a file and write to stdout or a file.
 #
-# By default it converts all input into CSV format.
+# By default it converts all input into CSV format or most input to graphite (removes the time and set columns when using graphite format)
 #
 # You can direct its output to a file with the --output <filename> argument.
 #
@@ -26,7 +29,7 @@
 # You can list the canonical column names with --listcolumns
 #
 # You can add a rowcount column using the --rowcount argument. This allows the output to be normalised
-# on a standard interval so different runs of the program can be graphed on the same timescale.
+# on a standard interval so different runs of the program can be graphed on the same timescale. (rowcount is disabled by default for graphite output)
 #
 # joe.drumgoole@10gen.com 
 #
@@ -34,7 +37,15 @@
 import sys
 import re
 import argparse
-import collections
+import socket
+import time
+
+# if ordereddict is available use it (i.e when using py 2.4 or 2.6)
+# use pip-2.6 install ordereddict to install this module
+try:
+    import ordereddict as collections
+except ImportError:
+    import collections
 
 column_order = [   'insert', # 0
                    'query',        # 1
@@ -101,8 +112,8 @@ def parseLine( x ) :
     x= re.sub( '\*', '', x )
     return x.split( ',' ) 
 
-def processLine( x, actual_columns, selectors ) :
-    return  processColumns( parseLine( x ), actual_columns, selectors )  
+def processLine( x, actual_columns, selectors , format = "csv" , graphiteprefix = "mongodb.stats") :
+    return  processColumns( parseLine( x ), actual_columns, selectors , format, graphiteprefix)
 
 def processHeader( actual_columns, selectors ) :
     
@@ -115,7 +126,7 @@ def processHeader( actual_columns, selectors ) :
         
 
 
-def processColumns( column_data, actual_columns, selectors ) :
+def processColumns( column_data, actual_columns, selectors, format = "csv", graphiteprefix = "mongodb.stats") :
 #
 # Take a row of column data and a list of selected columns and filter out the columns
 # that will be output based on the selectors. Data has been pre-cleaned so selectors is non-zero
@@ -123,14 +134,107 @@ def processColumns( column_data, actual_columns, selectors ) :
 #
     
     output_columns = []
-#    print ( "selectors : %s" % selectors )  
+    currTime = str(time.time())
+    #print ( "selectors : %s" % selectors )  
     for i in selectors :
-#            print "index : %s %d " % ( i, actual_columns[ i ] )
-        output_columns.append( column_data[ actual_columns[ i ]]) 
+        #print "index : %s %d " % ( i, actual_columns[ i ] )
+        if i in actual_columns :
+            if format == "csv":
+                    output_columns.append( column_data[ actual_columns[ i ]]) 
+            else:
+                data = column_data[ actual_columns[ i ]]
+                # sepcial handler for repl column
+                if i == "repl":
+                    # handle it in the followin way:
+                    #    PRI - primary (master) = 1
+                    #    SEC - secondary = 2
+                    #    REC - recovering = 3
+                    #    UNK - unknown = 4
+                    #    SLV - slave = 5
+                    #    RTR - mongos process ("router") = 6
+                    # any other value will be 7
+                    if data == "PRI":
+                        data = 1
+                    elif data == "SEC":
+                        data = 2
+                    elif data == "REC":
+                        data = 3
+                    elif data == "UNK":
+                        data = 4
+                    elif data == "SLV":
+                        data = 5
+                    elif data == "RTR":
+                        data = 6
+                    else:
+                        data = 7
+                if i == "netOut" or i == "netIn":
+                    st = data[-1]
+                    if st == "b":
+                        data = float(data[:-1])
+                        pass # dont do anything
+                    elif st == "k":
+                        data = float(data[:-1])
+                        data = data * 1024
+                    elif st == "m":
+                        data = float(data[:-1])
+                        data = data * 1024 * 1024
+                    elif st == "g":
+                        data = float(data[:-1])
+                        data = data * 1024 * 1024 * 1024
+                    elif st == "t":
+                        data = float(data[:-1])
+                        data = data * 1024 * 1024 * 1024 * 1024
+                if i == "mapped" or i == "vsize" or i == "res":
+                    st = data[-1]
+                    if st == "m":
+                        data = float(data[:-1])
+                        pass
+                    elif st == "g":
+                        data = float(data[:-1])
+                        data = data * 1024 
+                    elif st == "t": 
+                        data = float(data[:-1])
+                        data = data * 1024 * 1024
+                    elif st == "p":
+                        data = float(data[:-1])
+                        data = data * 1024 * 1024 * 1024
+                        
+                        
+                sep = ""
+                # if data have * in first field, change the data to include the word replicated
+                if not isinstance( data, ( int, long, float ) ) and data[0] == "*":
+                    data = data.strip("*")
+                    sep = ".replicated"
 
-    return ','.join( output_columns ) + "\n"
+                if i == "locked db":
+                    data = data.split(":")
+                    if data[0] == ".":
+                        data[0] = "global"
+                    sep = "." + data[0]
+                    data = data[1].strip("%")
+                    
+                if (i == "command" or i == "qr|qw" or i == "ar|aw") and (not isinstance( data, ( int, long, float ) ) and data.find("|") != -1) :
+                    data = data.split("|")
+                    if i == "command":
+                        i1 = "command.local"
+                        i2 = "command.replicated"
+                    elif i == "qr|qw":
+                        i1 = "qr"
+                        i2 = "qw"
+                    elif i == "ar|aw":
+                        i1 = "ar"
+                        i2 = "aw"
+                    
+                    output_columns.append( graphiteprefix + "." + i1 + sep + " " + str(data[0]) + " " + currTime)
+                    output_columns.append( graphiteprefix + "." + i2 + sep + " " + str(data[1]) + " " + currTime)
+                else:
+                    output_columns.append( graphiteprefix + "." + i.replace(" ","_") + sep + " " + str(data) + " " + currTime)
+
+    if format == "csv":
+        return ','.join( output_columns ) + "\n"
+    else:
+        return '\n'.join( output_columns )    
     
-
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser( description="Program to parse the output of mongostat into a CSV file" )
@@ -175,6 +279,15 @@ if __name__ == '__main__':
                          help="list out columns in current output and exit", 
                          default=False )
 
+    parser.add_argument( "--format",
+                         help="csv/graphite (default csv)", 
+                         choices=['csv', 'graphite'],
+                         default="csv" )
+
+    parser.add_argument( "--graphiteprefix",
+                         help="graphite metrics prefix ( default: mongodb.stats ), it alwasys adds the hostname after prefix and before metric, i.e mongodb.stats.myhostname1.insert", 
+                         default="mongodb.stats" )
+
     args = parser.parse_args()
 
     if args.input == "stdin" :
@@ -200,11 +313,9 @@ if __name__ == '__main__':
     x = input_stream.readline()  #
  
     if x.startswith( "connected" ) :
-#        print( x.rstrip( "\n" ))
         x = input_stream.readline()  # strip of connected to
 
     if x.startswith( "insert" ) :
-#        print( x.rstrip( "\n" ))
         actual_columns = parseHeader( column_order, x.rstrip( "\n" ))
         selected_columns = []
 
@@ -223,15 +334,22 @@ if __name__ == '__main__':
                 else :
                     sys.stderr.write( "Warning : you selected display of a column, '%s', which is not in the mongostat output\n" % i )
 
-#        print( "actual columns : %s" % actual_columns )
-#        print( "selected columns: %s" % selected_columns )
-
+        # we always use noheaders and no row count in graphite
+        # we also remove few columns by default (string columns)
+        if args.format == "graphite": 
+            args.noheaders = True
+            args.rowcount = False
+            del selected_columns["set"]
+            del selected_columns["time"]
+            #selected_columns.remove("set")
+            #selected_columns.remove("time")
+            
         if args.noheaders :
             pass
         else:
             if args.rowcount :
                 output_stream.write( "count," ) 
-    
+
             output_stream.write( processHeader( actual_columns, selected_columns )) # print headers once
             
             output_stream.write( "\n" ) 
@@ -242,6 +360,9 @@ if __name__ == '__main__':
         x = input_stream.readline()  # 
 
     rowcounter = 1
+    
+    # add the hostname to graphite prefix
+    graphiteprefix = args.graphiteprefix + "." + socket.gethostname()
     while x :
         if x.startswith( "insert" ) :
             x = input_stream.readline()
@@ -251,7 +372,7 @@ if __name__ == '__main__':
             output_stream.write( "%i," % rowcounter ) ;
             rowcounter += 1 
 
-        output_stream.write( processLine( x.rstrip( "\n" ), actual_columns, selected_columns )) # print headers once
+        output_stream.write( processLine( x.rstrip( "\n" ), actual_columns, selected_columns, args.format, graphiteprefix)) # print headers once
         
         output_stream.flush() 
 #        print( x.rstrip( "\n" ))
