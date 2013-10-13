@@ -1,5 +1,5 @@
-Mongostat to CSV Conversion Script
-==================================
+Mongostat to CSV/Graphite Conversion Script
+===========================================
 
     usage: mongostat2graphite.py [-h] [--version] [--output OUTPUT] [--append]
                              [--noheaders] [--input INPUT] [--columns COLUMNS]
