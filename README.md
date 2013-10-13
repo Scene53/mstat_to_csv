@@ -32,8 +32,8 @@ optional arguments:
 Example usage:
 
 Basic data sending to graphite instace:
-    $ mongostat --host localhost --port 10001 5 | python26 ./mongostat2graphite.py --format graphite | nc graphite.host
 
+    $ mongostat --host localhost --port 10001 5 | python26 ./mongostat2graphite.py --format graphite | nc graphite.host 2003 --graphiteprefix mongodb.stats
 	mongodb.stats.mymongohost1.insert 0 1381667304.65
     mongodb.stats.mymongohost1.query 0 1381667304.65
     mongodb.stats.mymongohost1.update 18 1381667304.65

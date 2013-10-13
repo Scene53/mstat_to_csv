@@ -233,7 +233,7 @@ def processColumns( column_data, actual_columns, selectors, format = "csv", grap
     if format == "csv":
         return ','.join( output_columns ) + "\n"
     else:
-        return '\n'.join( output_columns )    
+        return '\n'.join( output_columns ) + "\n"
     
 if __name__ == '__main__':
 
@@ -286,7 +286,7 @@ if __name__ == '__main__':
 
     parser.add_argument( "--graphiteprefix",
                          help="graphite metrics prefix ( default: mongodb.stats ), it alwasys adds the hostname after prefix and before metric, i.e mongodb.stats.myhostname1.insert", 
-                         default="mongodb.stats" )
+                         default="mongodb.mongodb.stats" )
 
     args = parser.parse_args()
 
