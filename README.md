@@ -46,7 +46,7 @@ Basic data sending to graphite instace:
     mongodb.stats.mymongohost1.vsize 103424.0 1381667304.65
     mongodb.stats.mymongohost1.res 4177.92 1381667304.65
     mongodb.stats.mymongohost1.faults 0 1381667304.65
-    mongodb.stats.mymongohost1.locked_db.casino53 2.0 1381667304.65
+    mongodb.stats.mymongohost1.locked_db.scene53 2.0 1381667304.65
     mongodb.stats.mymongohost1.idx_miss_% 0 1381667304.65
     mongodb.stats.mymongohost1.qr 0 1381667304.65
     mongodb.stats.mymongohost1.qw 0 1381667304.65
